@@ -71,7 +71,7 @@ jobs:
           CIBW_BUILD: cp3*win*64 
           CIBW_ENVIRONMENT: "CMAKE_GENERATOR='Visual Studio 17 2022'"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         name: Upload
         with:
           path: ${{runner.workspace}}/libsurvive/wheelhouse/*.whl

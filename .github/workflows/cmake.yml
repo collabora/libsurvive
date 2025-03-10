@@ -84,7 +84,7 @@ jobs:
       working-directory: ${{runner.workspace}}/libsurvive
       run: 7z a ${{runner.workspace}}/build/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }} ${{runner.workspace}}/build/install_root/*
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       name: Upload
       if: matrix.build_type == 'Release'
       with:

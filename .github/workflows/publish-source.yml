@@ -38,7 +38,7 @@ jobs:
       working-directory: ${{runner.workspace}}/libsurvive
       run: 7z a ${{runner.workspace}}/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }} ${{runner.workspace}}/libsurvive
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       name: Upload
       with:
         name: ${{ steps.bundle.outputs.BUNDLE_FILE_NAME }}
