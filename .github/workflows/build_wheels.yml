@@ -16,7 +16,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest]
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -24,62 +25,33 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: satackey/action-docker-layer-caching@v0.0.8
-        if: runner.os != 'Windows'
 
-      - name: Set up QEMU
+      - uses: actions/setup-python@v5
+        name: Setup Python
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install python dependencies
+        run: python -m pip install build twine
+
+      - uses: awalsh128/cache-apt-pkgs-action@latest
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v1
+        name: Install dependencies
         with:
-          platforms: all
+          packages: build-essential cmake git libeigen3-dev liblapacke-dev libopenblas-dev libpcap-dev libusb-1.0-0-dev zlib1g-dev
 
-      - name: Build the Docker image
-        working-directory: ${{runner.workspace}}/libsurvive/useful_files
-        if: runner.os != 'Windows'
-        run: |
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-user-static binfmt-support
-          sudo update-binfmts --enable qemu-arm
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker build . -f ./Docker.centos --tag libsurvive_manylinux2014_x86_64
-          docker build . -f ./Docker.centos --tag libsurvive_manylinux2014_aarch64 --build-arg BASE_IMAGE=manylinux2014_aarch64
-
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: '3.7'
-
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==2.3.1
-
-      - name: Build wheels - Linux
-        if: runner.os != 'Windows'
-        run: python -m cibuildwheel
-        env:
-          CIBW_BEFORE_ALL: "git config --global --add safe.directory /project"
-          CIBW_MANYLINUX_X86_64_IMAGE: libsurvive_manylinux2014_x86_64
-          CIBW_MANYLINUX_AARCH64_IMAGE: libsurvive_manylinux2014_aarch64
-          CIBW_BUILD: cp3*manylinux_x86_64 cp3*manylinux_aarch64* 
-          CIBW_ARCHS_LINUX: x86_64 i686 #aarch64
-
-
-      - name: Build wheels - Windows
-        if: runner.os == 'Windows'
-        run: python -m cibuildwheel
-        env:
-          CIBW_BEFORE_ALL: "git config --global --add safe.directory /project"
-          CIBW_BUILD: cp3*win*64 
-          CIBW_ENVIRONMENT: "CMAKE_GENERATOR='Visual Studio 17 2022'"
+      - name: Build
+        run: python -m build --wheel
 
       - uses: actions/upload-artifact@v4
         name: Upload
         with:
-          path: ${{runner.workspace}}/libsurvive/wheelhouse/*.whl
+          path: ${{runner.workspace}}/dist
 
       - name: Upload with twine
         run: |
           python -m pip install twine
-          python -m twine upload wheelhouse/*.whl --skip-existing
+          python -m twine upload dist/*.whl --skip-existing
         continue-on-error: true
         env:
           TWINE_USERNAME: __token__
