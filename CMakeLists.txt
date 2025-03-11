@@ -60,6 +60,7 @@ IF(WIN32)
       find_program(NUGET nuget HINTS "${CMAKE_BINARY_DIR}" )
     endif()
     message("Nuget is found at ${NUGET}")
+    SET(CMAKE_VS_NUGET_PACKAGE_RESTORE ON)
 
     if (CMAKE_SIZEOF_VOID_P MATCHES 8)
       set(WIN_PLATFORM "x64")

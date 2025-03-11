@@ -244,10 +244,6 @@ foreach(PLUGIN ${PLUGINS})
   endif()
 endforeach()
 
-IF(WIN32)
-  add_custom_command(TARGET survive PRE_BUILD COMMAND ${NUGET} restore ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.sln COMMENT "Restoring nuget dependencies")
-ENDIF(WIN32)
-
 IF(TARGET CNGFX)
   list(APPEND SURVIVE_EXECUTABLES simple_pose_test)
   set(simple_pose_test_ADDITIONAL_LIBS CNGFX)
