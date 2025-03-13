@@ -38,7 +38,16 @@ bool handle_lightcap(SurviveObject *so, const LightcapElement *_le) {
 	// Gen2 devices can trigger this on startup; but later packets should
 	// reliably change to lh_version == 1. If we see 50+ lightcap packets
 	// without these gen2 packets we can just call it for gen1.
-	assert(_le->length > 0);
+
+	SurviveContext *ctx = so->ctx;
+
+	// "assert(_le->length > 0);" sometimes breaks the whole program, so instead just return success = false and go on
+	uint16_t le_length = _le->length;
+	if (le_length == 0 ) {
+		SV_WARN("LightcapElement has zero length [SensorId:%d] [Timestamp:%04hX]", _le->sensor_id, _le->timestamp)
+		return false;
+	}
+
 	if (so->ctx->lh_version == -1) {
 		disambiguate_version *dv = so->disambiguator_data;
 		if (dv == 0) {
@@ -46,8 +55,6 @@ bool handle_lightcap(SurviveObject *so, const LightcapElement *_le) {
 		}
 
 		dv->total_count++;
-
-		SurviveContext *ctx = so->ctx;
 
 		// If the device is close to the LH, it's very possible to see lengths in this range. To prevent false
 		// positives while on gen2; we also check the timing -- it must see x correctly distanced 60/120hz pulses
