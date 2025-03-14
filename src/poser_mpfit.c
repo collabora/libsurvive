@@ -877,6 +877,13 @@ bool solve_global_scene(struct SurviveContext *ctx, MPFITData *d, PoserDataGloba
 		}
 	}
 
+	// in some cases my setup did not found a bestObjForCal...
+	// maybe my Controller was just hidden
+	if (bestObjForCal == -1) {
+		SV_VERBOSE(10, "No best object for fixing found");
+		return false;
+	}
+
 	SV_VERBOSE(10, "Best object for fixing was %s (%d)", survive_colorize(gss->scenes[bestObjForCal].so->codename),
 			   bestObjForCal);
 	SurvivePose *opt_cameras = survive_optimizer_get_camera(&mpfitctx);
