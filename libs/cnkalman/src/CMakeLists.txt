@@ -9,7 +9,3 @@ target_include_directories(cnkalman PUBLIC
 target_link_libraries(cnkalman cnmatrix)
 
 install(TARGETS cnkalman DESTINATION lib)
-
-pybind11_add_module(filter cnkalman_python_bindings.cpp)
-target_link_libraries(filter PUBLIC cnkalman)
-install(TARGETS filter DESTINATION lib)
