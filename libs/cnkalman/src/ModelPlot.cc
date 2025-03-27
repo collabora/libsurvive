@@ -63,12 +63,19 @@ namespace cnkalman {
         map.yrange(range[2], range[3]);
 
         if (show) {
-            plot.show();
-            map.show();
+            sciplot::Figure figs = {{plot, map}};
+            sciplot::Canvas canvas {{figs}};
+            canvas.show();
         }
-        plot.save(name + "-plot.svg");
-        map.save(name + ".svg");
-        map.save(name + ".png");
+
+        sciplot::Figure fig_plot = {{plot}};
+        sciplot::Canvas canvas_plot = {{fig_plot}};
+        canvas_plot.save(name + "-plot.svg");
+
+        sciplot::Figure fig_map = {{map}};
+        sciplot::Canvas canvas_map = {{fig_map}};
+        canvas_plot.save(name + ".svg");
+        canvas_plot.save(name + ".png");
 #endif
     }
 

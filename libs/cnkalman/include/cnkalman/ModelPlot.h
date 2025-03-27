@@ -13,8 +13,8 @@ namespace cnkalman {
         std::string name;
         int cnt = 0;
 #ifdef HAS_SCIPLOT
-        sciplot::Plot plot;
-        sciplot::Plot map;
+        sciplot::Plot2D plot;
+        sciplot::Plot2D map;
 #endif
         ModelPlot(const std::string &name = "plot", bool show = false);
 
