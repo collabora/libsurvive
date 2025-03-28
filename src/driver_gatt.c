@@ -19,13 +19,13 @@ struct connection_t {
 	char *addr;
 	char name[32];
 
-	gatt_connection_t *gconn;
+	gattlib_connection_t *gconn;
 	LIST_ENTRY(connection_t) entries;
 };
 
 typedef struct gatt_info {
 	SurviveContext *ctx;
-	void *adapter;
+	gattlib_adapter_t *adapter;
 	LIST_HEAD(listhead, connection_t) ble_connections;
 	og_thread_t thread;
 
@@ -53,7 +53,7 @@ static uuid_t *power_uuid() {
 	return &uuid;
 }
 
-static uint32_t read_char_byte(gatt_connection_t *gatt_connection, uuid_t *uuid) {
+static uint32_t read_char_byte(gattlib_connection_t *gatt_connection, uuid_t *uuid) {
 	void *buffer;
 	size_t buffer_length;
 
@@ -71,8 +71,9 @@ exit_error:
 	return 0xFFFFFFFF;
 }
 
-static void ble_connect_device_done(gatt_connection_t *gatt_connection, void *arg) {
-	struct connection_t *connection = arg;
+static void ble_connect_device_done(gattlib_adapter_t *adapter, const char *dst,
+		gattlib_connection_t *gatt_connection, int error, void *user_data) {
+	struct connection_t *connection = user_data;
 	char *addr = connection->addr;
 	SurviveContext *ctx = connection->driver->ctx;
 
@@ -130,26 +131,25 @@ static void ble_connect_device_done(gatt_connection_t *gatt_connection, void *ar
 	return;
 
 disconnect_exit:
-	gattlib_disconnect(gatt_connection);
+	gattlib_disconnect(gatt_connection, false);
 }
 
 static void *ble_connect_device(void *arg) {
 	struct connection_t *connection = arg;
 	char *addr = connection->addr;
-	gatt_connection_t *gatt_connection;
 	SurviveContext *ctx = connection->driver->ctx;
 
-	gatt_connection = gattlib_connect_async(connection->driver->adapter, addr, 0, ble_connect_device_done, connection);
-
-	if (gatt_connection == NULL) {
-		SV_WARN("Fail to connect to the bluetooth device %s.", addr);
+	int ret = gattlib_connect(connection->driver->adapter, addr, 0, ble_connect_device_done, connection);
+	if (ret != GATTLIB_SUCCESS) {
+		SV_WARN("Fail to connect to the bluetooth device %s: %d", addr, ret);
 	}
 
 	return 0;
 }
 
-static void ble_discovered_device(void *adapter, const char *addr, const char *name, void *arg) {
-	gatt_info *driver = (gatt_info *)arg;
+static void ble_discovered_device(gattlib_adapter_t *adapter, const char *addr, const char *name,
+		void *user_data) {
+	gatt_info *driver = (gatt_info *)user_data;
 	SurviveContext *ctx = driver->ctx;
 
 	if (name == 0 || strncmp(name, "LHB", strlen("LHB")) != 0)
@@ -198,7 +198,7 @@ static int gatt_close(SurviveContext *ctx, void *arg) {
 					SV_INFO("GATT: Powering down base station %s", driver->lhs[i]->name);
 					gattlib_write_char_by_uuid(driver->lhs[i]->gconn, power_uuid(), &powerdown[0], 1);
 					gattlib_write_char_by_uuid(driver->lhs[i]->gconn, power_uuid(), &powerdown[1], 1);
-					gattlib_disconnect(driver->lhs[i]->gconn);
+					gattlib_disconnect(driver->lhs[i]->gconn, true);
 				}
 			}
 		}
