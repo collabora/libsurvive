@@ -1263,7 +1263,7 @@ static int mp_fdjac2(mp_func funct, int m, int n, int *ifree, int npar, FLT *x, 
 				if (!debug) {
 					/* Non-debug path for speed */
 					for (i = 0; i < m; i++, ij++) {
-						fjac[ij] = (fjac[ij] - wa[i]) / (2 * h); /* fjac[i+m*j] */
+						fjac[ij] = (wa2[ij] - wa[i]) / (2 * h); /* fjac[i+m*j] */
 					}
 				} else {
 					/* Debug path for correctness */
