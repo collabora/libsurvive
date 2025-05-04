@@ -2,13 +2,16 @@ if(OPENVR_LIBRARIES AND NOT USE_SINGLE_PRECISION)
   add_subdirectory(openvr_driver)
 endif()
 
-find_package(catkin QUIET COMPONENTS
-  roscpp
-  geometry_msgs)
+get_property(survive_in_catkin_make GLOBAL PROPERTY SURVIVE_IN_CATKIN_MAKE)
 
-IF(catkin_DIR)
-  add_subdirectory(ros_publisher)
-ENDIF()
+if(NOT survive_in_catkin_make)
+  find_package(catkin QUIET COMPONENTS
+    roscpp
+    geometry_msgs)
+  IF(catkin_DIR)
+    add_subdirectory(ros_publisher)
+  ENDIF()
+endif()
 
 find_library(XDO_LIB xdo)
 if(XDO_LIB)
