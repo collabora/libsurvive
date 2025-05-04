@@ -20,7 +20,7 @@ endif()
 
 macro(VERBOSE_OPTION ARG DESC)
     option(${ARG} ${DESC} ${ARGN})
-    message("-- Option: ${ARG}: ${ARGN}")
+    message("-- Option: ${ARG}: ${${ARG}}")
 endmacro()
 
 VERBOSE_OPTION(DO_CORE_BUILD "Only build essentials by default" ${CORE_BUILD_DEFAULT})
