@@ -9,12 +9,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 #include "assert.h"
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
+#ifdef __APPLE__
+static const char* plugin_ext() { return ".dylib"; }
+#else
 static const char* plugin_ext() { return ".so"; }
+#endif
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -37,8 +44,19 @@ static const char *get_so_filename() {
 static const char *get_exe_filename() {
 	static char exe_path[PATH_MAX] = { 0 };
 	if (exe_path[0] == 0) {
-		size_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path));
-		exe_path[len] = 0;
+#ifdef __APPLE__
+		uint32_t size = sizeof(exe_path);
+		if (_NSGetExecutablePath(exe_path, &size) != 0) {
+			exe_path[0] = 0;
+		}
+#else
+		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+		if (len > 0) {
+			exe_path[len] = 0;
+		} else {
+			exe_path[0] = 0;
+		}
+#endif
 	}
 	return exe_path;
 }

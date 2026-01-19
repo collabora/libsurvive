@@ -21,7 +21,11 @@
 
 #include <stdbool.h>
 
+#ifdef __APPLE__
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "cnmatrix/cn_flt.h"
 #include "math.h"
 #include "string.h"

@@ -218,6 +218,7 @@ void error_fn(void *user, const struct CnMat *x0, const struct CnMat *x1, struct
 	}
 }
 void survive_kalman_lighthouse_ootx(SurviveKalmanLighthouse *tracker) {
+	if (tracker == NULL) return;
 	tracker->state.BSD0 = tracker->ctx->bsd[tracker->lh].fcal[0];
 	tracker->state.BSD1 = tracker->ctx->bsd[tracker->lh].fcal[1];
 }
