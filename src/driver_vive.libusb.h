@@ -21,7 +21,7 @@ static inline void survive_usb_setup_update_feature_report(survive_usb_transfer_
 														   size_t datalen) {
 	memcpy(tx->buffer + 8, data, datalen);
 	libusb_fill_control_setup(tx->buffer, LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-							  0x09, 0x300 | tx->buffer[8], 0, datalen + 8);
+							  0x09, 0x300 | tx->buffer[8], 0, datalen);
 }
 
 static inline void survive_usb_setup_control(survive_usb_transfer_t *tx, struct SurviveUSBInfo *usbInfo,
@@ -214,11 +214,15 @@ static void handle_transfer(struct libusb_transfer *transfer) {
 	SurviveContext *ctx = iface->ctx;
 	if (!iface->shutdown && transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
         iface->consecutive_timeouts++;
-        if(iface->consecutive_timeouts >= 3) {
+        if(iface->consecutive_timeouts >= 10) {
             SV_WARN("%f %s Device turned off: %d", survive_run_time(ctx), survive_colorize_codename(iface->assoc_obj),
                     transfer->status);
             goto object_turned_off;
         } else {
+            // Resubmit so we keep polling for data
+            if (libusb_submit_transfer(transfer)) {
+                goto shutdown;
+            }
             return;
         }
 	}

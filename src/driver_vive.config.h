@@ -64,7 +64,7 @@ static inline void setup_packet_state(struct survive_config_packet *packet) {
 	case SURVIVE_CONFIG_STATE_DONE:
 		return;
 	}
-	survive_usb_setup_control(packet->tx, packet->usbInfo, handle_config_tx, packet, 1000);
+	survive_usb_setup_control(packet->tx, packet->usbInfo, handle_config_tx, packet, 5000);
 }
 
 void survive_usb_feature_read(SurviveObject *so, const uint8_t *data, size_t length) {
@@ -112,6 +112,20 @@ void handle_config_tx(survive_usb_transfer_t *transfer) {
 			goto cleanup;
 		}
 
+		/* Watchman (WM0) dongle often doesn't respond to VERSION/IMU_SCALES - skip to data streaming */
+		if (packet->stall_counter >= 1 &&
+			strncmp(packet->usbInfo->device_info->codename, "WM", 2) == 0 &&
+			(packet->state == SURVIVE_CONFIG_STATE_VERSION || packet->state == SURVIVE_CONFIG_STATE_IMU_SCALES)) {
+			SV_INFO("Skipping VERSION/IMU_SCALES for %s (dongle doesn't support feature reports)",
+					survive_colorize(packet->usbInfo->device_info->codename));
+			packet->stall_counter = 0;
+			if (packet->state == SURVIVE_CONFIG_STATE_VERSION && so) {
+				SURVIVE_INVOKE_HOOK_SO(config, so, so->conf, so->conf_cnt);
+			}
+			/* Skip both VERSION and IMU_SCALES - go straight to data streaming */
+			goto cleanup;
+		}
+
 		packet->usbInfo->nextCfgSubmitTime = survive_run_time(ctx) + .02;
 		if (packet->stall_counter > 5) {
 			packet->stall_counter = 0;
@@ -140,7 +154,11 @@ void handle_config_tx(survive_usb_transfer_t *transfer) {
 
 	switch (packet->state) {
 	case SURVIVE_CONFIG_STATE_MAGICS:
-		if (tx_length < packet->current_magic->length) {
+		/* For SET_REPORT OUT transfers, actual_length only reflects the data phase.
+		 * On macOS, libusb may report fewer bytes than sent due to setup-header accounting
+		 * differences. Any completed transfer (tx_length > 0 or status == COMPLETED) means
+		 * the device received the command. */
+		if (transfer->status == LIBUSB_TRANSFER_COMPLETED && tx_length == 0 && packet->current_magic->length > 0) {
 			SV_WARN("Magic for %s was not acked; length %d vs %d", so ? survive_colorize(so->codename) : "unknown",
 					(int)tx_length, (int)packet->current_magic->length);
 			goto resubmit;
@@ -183,13 +201,20 @@ void handle_config_tx(survive_usb_transfer_t *transfer) {
 			str_append_n(&packet->cfg, (const char *)&buffer[2], size);
 			if (size == 0) {
 				// NOTE: Sometimes the actual length is 2 bytes longer than advertised; not sure why
-				if (packet->expected_cfg_length > packet->cfg.length) {
+				// Some devices (e.g. Watchman/dongle) report incorrect expected length - try using received data
+				// if we have substantial config (>1KB) rather than retrying indefinitely
+				int length_mismatch = packet->expected_cfg_length > (int)packet->cfg.length;
+				if (length_mismatch && packet->cfg.length < 1000) {
 					SV_WARN("Config request failed; trying again %f %s (%d > %d)",
 							survive_run_time(ctx) - packet->start_time, survive_colorize(so->codename),
 							packet->expected_cfg_length, (int)packet->cfg.length);
 					str_clear(&packet->cfg);
 					setup_config_req(packet);
 					goto resubmit;
+				}
+				if (length_mismatch) {
+					SV_WARN("Config length mismatch %s (expected %d, got %ld) - attempting to use received data",
+							survive_colorize(so->codename), packet->expected_cfg_length, packet->cfg.length);
 				}
 
 				SV_VERBOSE(100, "Config done in %f sec for %s, len %ld", survive_run_time(ctx) - packet->start_time,

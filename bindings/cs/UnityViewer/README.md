@@ -1,1 +1,0 @@
-This project requires you to build LibSurviveBinding.sln and add it's dll as an asset. 

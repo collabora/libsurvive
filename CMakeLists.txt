@@ -214,6 +214,19 @@ foreach(executable ${SURVIVE_EXECUTABLES})
   endif()
 endforeach()
 
+# Separate C program (in parent repo) that links to libsurvive to pull tracker position/time/name
+set(TRACKER_CLIENT_DIR "${CMAKE_SOURCE_DIR}/../tracker_client")
+if(EXISTS "${TRACKER_CLIENT_DIR}/tracker_client.c")
+  add_executable(tracker_client "${TRACKER_CLIENT_DIR}/tracker_client.c")
+  target_include_directories(tracker_client PRIVATE "${TRACKER_CLIENT_DIR}")
+  target_link_libraries(tracker_client survive ${CMAKE_THREAD_LIBS_INIT})
+  set_target_properties(tracker_client PROPERTIES FOLDER "apps")
+  foreach(plugin ${SURVIVE_BUILT_PLUGINS})
+    add_dependencies(tracker_client ${plugin})
+  endforeach()
+  message(STATUS "tracker_client (separate program) enabled")
+endif()
+
 IF(WIN32)
   # This property needs to be set on a target at the root; doesn't matter which
   set_target_properties( survive-cli PROPERTIES VS_USER_PROPS "$(SolutionDir)\\packages\\OpenBLAS.0.2.14.1\\build\\native\\openblas.targets" )

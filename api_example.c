@@ -49,9 +49,12 @@ int main(int argc, char **argv) {
 			const struct SurviveSimplePoseUpdatedEvent *pose_event = survive_simple_get_pose_updated_event(&event);
 			SurvivePose pose = pose_event->pose;
 			FLT timecode = pose_event->time;
-			/*printf("%s %s (%7.3f): %f %f %f %f %f %f %f\n", survive_simple_object_name(pose_event->object),
-				   survive_simple_serial_number(pose_event->object), timecode, pose.Pos[0], pose.Pos[1], pose.Pos[2],
-				   pose.Rot[0], pose.Rot[1], pose.Rot[2], pose.Rot[3]);*/
+			printf("%s %s (%7.3f): pos [%f, %f, %f] quat [%f, %f, %f, %f]\n",
+				   survive_simple_object_name(pose_event->object),
+				   survive_simple_serial_number(pose_event->object), timecode,
+				   pose.Pos[0], pose.Pos[1], pose.Pos[2],
+				   pose.Rot[0], pose.Rot[1], pose.Rot[2], pose.Rot[3]);
+			fflush(stdout);
 			break;
 		}
 		case SurviveSimpleEventType_ButtonEvent: {

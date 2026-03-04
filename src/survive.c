@@ -719,9 +719,6 @@ int survive_startup(SurviveContext *ctx) {
 		ctx->PoserFn = PreferredPoserCB;
 	}
 
-	// saving the config extra to make sure that the user has a config file they can change.
-	config_save(ctx);
-
 	int calibrateMandatory = survive_configi(ctx, "force-calibrate", SC_GET, 0);
 	if (calibrateMandatory) {
 		SV_INFO("Force calibrate flag set -- clearing position on all lighthouses");
@@ -731,6 +728,9 @@ int survive_startup(SurviveContext *ctx) {
 			ctx->bsd[i].Pose = (SurvivePose){0};
 		}
 	}
+
+	// saving the config after force-calibrate clear so we don't re-persist old lighthouse positions.
+	config_save(ctx);
 
 	FLT random_noise = survive_configf(ctx, "random-bsd-noise", SC_GET, -1);
 	if (random_noise > 0) {

@@ -14,7 +14,12 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
+
+#ifdef __APPLE__
+static const char* plugin_ext() { return ".dylib"; }
+#else
 static const char* plugin_ext() { return ".so"; }
+#endif
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
