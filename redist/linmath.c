@@ -296,7 +296,7 @@ FLT quatdist(const LinmathQuat q1, const LinmathQuat q2) {
 	for (int i = 0; i < 4; i++) {
 		rtn += q1[i] * q2[i];
 	}
-	rtn = linmath_max(1., linmath_min(-1, rtn));
+	rtn = linmath_min(1., linmath_max(-1., rtn));
 	return 2 * acos(FLT_FABS(rtn));
 }
 
