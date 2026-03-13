@@ -3106,8 +3106,13 @@ void survive_data_cb_locked(uint64_t time_received_us, SurviveUSBInterface *si) 
 		} else if (id == VIVE_REPORT_USB_TRACKER_LIGHTCAP_V1) {
 			SV_INFO("USB lightcap report is of an unexpected type for %s: %d (0x%02x)", obj->codename, id, id);
 		} else {
-			SV_ERROR(SURVIVE_ERROR_HARWARE_FAULT, "USB lightcap report is of an unknown type for %s: %d (0x%02x)",
-					 obj->codename, id, id);
+			/* Unknown report IDs are emitted by newer tracker firmware that
+			 * this version of libsurvive doesn't know about. Treating an
+			 * unrecognised ID as a hardware fault is wrong — it crashes the
+			 * process on firmware upgrades. Downgrade to a warning and ignore
+			 * the packet so tracking continues on all known report types. */
+			SV_WARN("USB lightcap report is of an unknown type for %s: %d (0x%02x); ignoring",
+					obj->codename, id, id);
 		}
 
 		break;
