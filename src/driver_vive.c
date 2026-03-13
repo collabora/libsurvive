@@ -726,6 +726,9 @@ static int AttachInterface(SurviveViveData *sv, struct SurviveUSBInfo *usbObject
 								   0);
 
 	iface->last_submit_time = OGGetAbsoluteTimeUS();
+
+	libusb_clear_halt(devh, endpoint_num);
+
 	int rc = libusb_submit_transfer(tx);
 	if (rc) {
 		SV_ERROR(SURVIVE_ERROR_HARWARE_FAULT, "Error: Could not submit transfer for %s 0x%02x (Code %d, %s)", hname,
