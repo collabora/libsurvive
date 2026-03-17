@@ -472,6 +472,18 @@ static int AttachInterface(SurviveViveData *sv, struct SurviveUSBInfo *usbObject
 						   USBHANDLE devh, usb_callback cb);
 static int survive_vive_send_haptic(SurviveObject *so, FLT frequency, FLT amplitude, FLT duration_seconds);
 
+static bool survive_device_is_rf(const struct DeviceInfo *device_info) {
+	switch (device_info->type) {
+	case USB_DEV_HMD:
+	case USB_DEV_HMD_IMU_LH:
+	case USB_DEV_W_WATCHMAN1:
+	case USB_DEV_TRACKER0:
+	case USB_DEV_TRACKER1:
+		return false;
+	}
+	return true;
+}
+
 #ifdef HIDAPI
 #include "driver_vive.hidapi.h"
 #else
@@ -505,18 +517,6 @@ struct survive_config_packet {
 };
 
 #include "driver_vive.config.h"
-
-static bool survive_device_is_rf(const struct DeviceInfo *device_info) {
-	switch (device_info->type) {
-	case USB_DEV_HMD:
-	case USB_DEV_HMD_IMU_LH:
-	case USB_DEV_W_WATCHMAN1:
-	case USB_DEV_TRACKER0:
-	case USB_DEV_TRACKER1:
-		return false;
-	}
-	return true;
-}
 
 static struct SurviveUSBInfo *survive_get_usb_info(SurviveObject *so) { return (struct SurviveUSBInfo *)so->driver; }
 

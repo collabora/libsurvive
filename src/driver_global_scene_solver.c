@@ -62,6 +62,32 @@ static size_t add_scenes(struct global_scene_solver *gss, SurviveObject *so) {
 
 	SurviveSensorActivations *activations = &so->activations;
 
+	// TT clean up scenes with invalid SurviveObjects
+	unsigned int free_idx = 0;
+	for (int i = 0; i < GSS_NUM_STORED_SCENES; i++) {
+		if (gss->scenes[i].so == NULL) {
+			continue;
+		}
+		
+		bool is_still_valid = false;
+		if (gss->scenes[i].so == so) {
+			is_still_valid = true;
+		}
+		for (int j = 0; j < ctx->objs_ct; j++) {
+			if (gss->scenes[i].so == ctx->objs[j]) {
+				is_still_valid = true;
+			}
+		}
+
+		if (is_still_valid) {
+			gss->scenes[free_idx].so = gss->scenes[i].so;
+			free_idx++;
+		} else {
+			SV_WARN("in GlobalSceneSolver: deleted scene %d with SurviveObject at adress &%p", i, (void* )so);
+		}
+	}
+	gss->scenes_cnt = free_idx;
+
 	struct PoserDataGlobalScene *scene = &gss->scenes[gss->scenes_cnt % GSS_NUM_STORED_SCENES];
 
 	scene->pose = so->OutPoseIMU;
