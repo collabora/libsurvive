@@ -309,6 +309,7 @@ struct model_number_metadata model_number_subtypes[] = {
 	{"Tundra Tracker", SURVIVE_OBJECT_SUBTYPE_TRACKER_GEN2, 1.},
 	{"VIVE_Pro 2 MV", SURVIVE_OBJECT_TYPE_HMD, 1.},
 	{"VIVE Controller Pro MV", SURVIVE_OBJECT_SUBTYPE_WAND, 1.},
+	{"Beyond", SURVIVE_OBJECT_SUBTYPE_INDEX_HMD, 1.},
 };
 
 static int process_jsontok(scratch_space_t *scratch, char *d, stack_entry_t *stack, jsmntok_t *t, int count) {
