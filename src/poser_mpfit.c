@@ -957,7 +957,10 @@ bool solve_global_scene(struct SurviveContext *ctx, MPFITData *d, PoserDataGloba
 
 	survive_get_ctx_lock(ctx);
 	survive_recording_write_matrix(ctx->recptr, 0, 5, "GSS", &R);
-	bool status_failure = res <= 0;
+	/* MP_MAXITER means the solver exhausted its iteration budget without
+	 * converging. The result is an intermediate, unconverged pose — treat it
+	 * as a failure so the bad lighthouse positions are not written to disk. */
+	bool status_failure = res <= 0 || res == MP_MAXITER;
 	FLT sensor_covariance = d->sensor_variance * d->sensor_variance;
 	FLT sensor_error = sqrtf(mpfitctx.stats.sensor_error / mpfitctx.stats.sensor_error_cnt);
 	if (status_failure || sensor_error > d->opt.max_cal_error) {
