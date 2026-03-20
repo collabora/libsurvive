@@ -944,6 +944,14 @@ void survive_kalman_tracker_process_noise(const struct SurviveKalmanTracker_Para
 	 * positional model with a second order rotational model with tuning parameters
 	 */
 
+	/* Cap dt for process noise to prevent t^7 explosion during long tracking gaps.
+	 * State prediction still uses the real dt; only uncertainty growth (Q matrix)
+	 * is bounded here. Without this cap, a gap of ~1s yields t^7 = 1.0 which
+	 * inflates Q enough to cause NaN/Inf in the filter on the next update
+	 * (observed as a quatrotateabout assertion failure on cold start or blackout
+	 * recovery). 50ms is comfortably above the normal ~8ms IMU interval. */
+	if (t > 0.05) t = 0.05;
+
 	FLT t2 = t * t;
 	FLT t3 = t2 * t;
 	FLT t4 = t3 * t;
