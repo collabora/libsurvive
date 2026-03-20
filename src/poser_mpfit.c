@@ -187,6 +187,21 @@ static size_t construct_input_from_scene(const MPFITData *d, survive_long_timeco
 				if (isReadingValue) {
 					const FLT *a = scene->angles[sensor][lh];
 
+					/* Guard against non-finite angles from corrupted optical data
+					 * (bad FPGA timestamps during USB disturbances). Passing NaN
+					 * into the MPFIT solver causes it to produce a garbage pose
+					 * that can then assert-crash downstream. One dropped measurement
+					 * has negligible effect on the pose solve. */
+					if (!isfinite(a[axis])) {
+						static int warned = 0;
+						if (!warned) {
+							fprintf(stderr, "[libsurvive WARN] poser_mpfit: NaN optical angle sensor %d lh %d axis %d; suppressing further\n",
+									(int)sensor, (int)lh, (int)axis);
+							warned = 1;
+						}
+						continue;
+					}
+
 					survive_optimizer_measurement *meas =
 						survive_optimizer_emplace_meas(mpfitctx, survive_optimizer_measurement_type_light);
 
