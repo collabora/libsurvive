@@ -136,7 +136,7 @@ SURVIVE_EXPORT bool survive_simple_object_charging(const SurviveSimpleObject *sa
 /**
  * @return The object charge percent from 0 to 100
  */
-SURVIVE_EXPORT uint8_t survive_simple_object_charge_percet(const SurviveSimpleObject *sao);
+SURVIVE_EXPORT uint8_t survive_simple_object_charge_percent(const SurviveSimpleObject *sao);
 
 /**
  * Gets the null terminated name of the object.

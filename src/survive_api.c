@@ -480,7 +480,7 @@ SURVIVE_EXPORT bool survive_simple_object_charging(const SurviveSimpleObject *sa
 	}
 }
 
-SURVIVE_EXPORT uint8_t survive_simple_object_charge_percet(const SurviveSimpleObject *sao) {
+SURVIVE_EXPORT uint8_t survive_simple_object_charge_percent(const SurviveSimpleObject *sao) {
 	switch (sao->type) {
 	case SurviveSimpleObject_LIGHTHOUSE: {
 		return 100;
