@@ -139,6 +139,12 @@ SURVIVE_EXPORT bool survive_simple_object_charging(const SurviveSimpleObject *sa
 SURVIVE_EXPORT uint8_t survive_simple_object_charge_percent(const SurviveSimpleObject *sao);
 
 /**
+ * @deprecated Misspelled name kept for backwards compatibility; use
+ * survive_simple_object_charge_percent() instead.
+ */
+SURVIVE_EXPORT uint8_t survive_simple_object_charge_percet(const SurviveSimpleObject *sao);
+
+/**
  * Gets the null terminated name of the object.
  */
 SURVIVE_EXPORT const char *survive_simple_object_name(const SurviveSimpleObject *sao);

@@ -494,6 +494,11 @@ SURVIVE_EXPORT uint8_t survive_simple_object_charge_percent(const SurviveSimpleO
 	}
 }
 
+// Deprecated: backwards compatibility with the old misspelled name.
+SURVIVE_EXPORT uint8_t survive_simple_object_charge_percet(const SurviveSimpleObject *sao) {
+	return survive_simple_object_charge_percent(sao);
+}
+
 const char *survive_simple_object_name(const SurviveSimpleObject *sao) { return sao->name; }
 const char *survive_simple_serial_number(const SurviveSimpleObject *sao) {
 	switch (sao->type) {
