@@ -193,12 +193,8 @@ static size_t construct_input_from_scene(const MPFITData *d, survive_long_timeco
 					 * that can then assert-crash downstream. One dropped measurement
 					 * has negligible effect on the pose solve. */
 					if (!isfinite(a[axis])) {
-						static int warned = 0;
-						if (!warned) {
-							fprintf(stderr, "[libsurvive WARN] poser_mpfit: NaN optical angle sensor %d lh %d axis %d; suppressing further\n",
-									(int)sensor, (int)lh, (int)axis);
-							warned = 1;
-						}
+						fprintf(stderr, "[libsurvive WARN] poser_mpfit: NaN optical angle sensor %d lh %d axis %d\n",
+								(int)sensor, (int)lh, (int)axis);
 						continue;
 					}
 
