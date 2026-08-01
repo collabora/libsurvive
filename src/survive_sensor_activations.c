@@ -454,7 +454,7 @@ SURVIVE_EXPORT survive_long_timecode SurviveSensorActivations_long_timecode_ligh
 	use that as a basis. It's worth noting that I've never seen a system develop this while running; it would
 	likely cause some chaos if it did since it'd kick the kalman out of sorts.
 	***/
-	if (self->last_imu != 0 && labs(time_sync_error) > 48000000) {
+	if (self->last_imu != 0 && llabs(time_sync_error) > 48000000) {
 		int64_t offset = 0x10000000;
 		int scale = DIV_ROUND_CLOSEST(time_sync_error, offset);
 		initial_time -= offset * scale;
