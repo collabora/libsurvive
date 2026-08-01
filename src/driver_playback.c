@@ -222,7 +222,7 @@ static int parse_and_run_imu(const char *line, SurvivePlaybackData *driver, bool
 		return 0;
 
 	char dev[10];
-	int timecode = 0;
+	survive_timecode timecode = 0;
 	FLT accelgyro[9] = { 0 };
 	int mask;
 	int id;
@@ -231,7 +231,7 @@ static int parse_and_run_imu(const char *line, SurvivePlaybackData *driver, bool
 	char i_char = 0;
 
 	int rr = sscanf(line,
-					"%s %c %d %d " FLT_sformat " " FLT_sformat " " FLT_sformat " " FLT_sformat " " FLT_sformat
+					"%s %c %d %u " FLT_sformat " " FLT_sformat " " FLT_sformat " " FLT_sformat " " FLT_sformat
 					" " FLT_sformat " " FLT_sformat " " FLT_sformat " " FLT_sformat "%d",
 					dev, &i_char, &mask, &timecode, &accelgyro[0], &accelgyro[1], &accelgyro[2], &accelgyro[3],
 					&accelgyro[4], &accelgyro[5], &accelgyro[6], &accelgyro[7], &accelgyro[8], &id);
