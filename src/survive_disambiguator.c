@@ -41,7 +41,6 @@ bool handle_lightcap(SurviveObject *so, const LightcapElement *_le) {
 
 	SurviveContext *ctx = so->ctx;
 
-	// "assert(_le->length > 0);" sometimes breaks the whole program, so instead just return success = false and go on
 	uint16_t le_length = _le->length;
 	if (le_length == 0 ) {
 		SV_WARN("LightcapElement has zero length [SensorId:%d] [Timestamp:%04hX]", _le->sensor_id, _le->timestamp)
