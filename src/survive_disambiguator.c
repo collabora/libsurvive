@@ -47,7 +47,7 @@ bool handle_lightcap(SurviveObject *so, const LightcapElement *_le) {
 		return false;
 	}
 
-	if (so->ctx->lh_version == -1) {
+	if (ctx->lh_version == -1) {
 		disambiguate_version *dv = so->disambiguator_data;
 		if (dv == 0) {
 			so->disambiguator_data = dv = SV_NEW(disambiguate_version);
