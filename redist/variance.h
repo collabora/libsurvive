@@ -12,10 +12,21 @@ static inline void variance_measure_add(struct variance_measure *meas, const FLT
 	if (meas->size == 0)
 		meas->size = 1;
 
+	/* Guard against non-finite values. Corrupt optical angles (e.g. bad FPGA
+	 * timestamps during USB disturbances) can reach here as NaN or Inf. The
+	 * assert below would crash the process and corrupt the on-disk config;
+	 * dropping one sample is strictly safer and has negligible effect on the
+	 * variance estimate. */
+	for (int i = 0; i < meas->size; i++) {
+		if (!isfinite(d[i])) {
+			fprintf(stderr, "[libsurvive] variance_measure_add: non-finite d[%d]=%f, dropping measurement\n", i, (double)d[i]);
+			return;
+		}
+	}
+
 	meas->n++;
 	addnd(meas->sum, meas->sum, d, meas->size);
 	for (int i = 0; i < meas->size; i++) {
-		assert(isfinite(d[i]));
 		meas->sumSq[i] += d[i] * d[i];
 	}
 }

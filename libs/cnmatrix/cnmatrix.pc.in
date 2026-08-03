@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/include/cnmatrix
+
+Name: @CMAKE_PROJECT_NAME@
+Description: Cnmatrix
+Version: 0
+Libs: -L${libdir} -lcnmatrix @EXTRA_LIBS@
+Cflags: -I${includedir} -I${includedir}/redist

@@ -472,6 +472,18 @@ static int AttachInterface(SurviveViveData *sv, struct SurviveUSBInfo *usbObject
 						   USBHANDLE devh, usb_callback cb);
 static int survive_vive_send_haptic(SurviveObject *so, FLT frequency, FLT amplitude, FLT duration_seconds);
 
+static bool survive_device_is_rf(const struct DeviceInfo *device_info) {
+	switch (device_info->type) {
+	case USB_DEV_HMD:
+	case USB_DEV_HMD_IMU_LH:
+	case USB_DEV_W_WATCHMAN1:
+	case USB_DEV_TRACKER0:
+	case USB_DEV_TRACKER1:
+		return false;
+	}
+	return true;
+}
+
 #ifdef HIDAPI
 #include "driver_vive.hidapi.h"
 #else
@@ -505,18 +517,6 @@ struct survive_config_packet {
 };
 
 #include "driver_vive.config.h"
-
-static bool survive_device_is_rf(const struct DeviceInfo *device_info) {
-	switch (device_info->type) {
-	case USB_DEV_HMD:
-	case USB_DEV_HMD_IMU_LH:
-	case USB_DEV_W_WATCHMAN1:
-	case USB_DEV_TRACKER0:
-	case USB_DEV_TRACKER1:
-		return false;
-	}
-	return true;
-}
 
 static struct SurviveUSBInfo *survive_get_usb_info(SurviveObject *so) { return (struct SurviveUSBInfo *)so->driver; }
 
@@ -583,7 +583,7 @@ void vive_switch_mode(struct SurviveUSBInfo *driverInfo, enum LightcapMode light
 	SurviveObject *w = driverInfo->so;
 	if (driverInfo->timeWithoutFlag == 0) {
 		driverInfo->timeWithoutFlag = 1;
-		uint8_t buffer[9] = {0};
+		uint8_t buffer[64] = {0};
 		size_t buffer_length = 0;
 		if (survive_device_is_rf(driverInfo->device_info)) {
 			buffer[0] = VIVE_REPORT_COMMAND;
@@ -596,11 +596,11 @@ void vive_switch_mode(struct SurviveUSBInfo *driverInfo, enum LightcapMode light
 			buffer[6] = 2;
 			buffer[7] = lightcapMode == LightcapMode_raw2 ? 1 : 0;
 			buffer[8] = 0;
-			buffer_length = 9;
+			buffer_length = 64;
 		} else {
 			buffer[0] = VIVE_REPORT_CHANGE_MODE;
 			buffer[1] = (lightcapMode == LightcapMode_raw1) ? 1 : (lightcapMode == LightcapMode_raw2) ? 3 : 0;
-			buffer_length = 5;
+			buffer_length = 64;
 		}
 
 		if (driverInfo->handle) {
@@ -726,6 +726,9 @@ static int AttachInterface(SurviveViveData *sv, struct SurviveUSBInfo *usbObject
 								   0);
 
 	iface->last_submit_time = OGGetAbsoluteTimeUS();
+
+	libusb_clear_halt(devh, endpoint_num);
+
 	int rc = libusb_submit_transfer(tx);
 	if (rc) {
 		SV_ERROR(SURVIVE_ERROR_HARWARE_FAULT, "Error: Could not submit transfer for %s 0x%02x (Code %d, %s)", hname,
@@ -3106,8 +3109,8 @@ void survive_data_cb_locked(uint64_t time_received_us, SurviveUSBInterface *si) 
 		} else if (id == VIVE_REPORT_USB_TRACKER_LIGHTCAP_V1) {
 			SV_INFO("USB lightcap report is of an unexpected type for %s: %d (0x%02x)", obj->codename, id, id);
 		} else {
-			SV_ERROR(SURVIVE_ERROR_HARWARE_FAULT, "USB lightcap report is of an unknown type for %s: %d (0x%02x)",
-					 obj->codename, id, id);
+			SV_WARN("USB lightcap report is of an unknown type for %s: %d (0x%02x); ignoring",
+					obj->codename, id, id);
 		}
 
 		break;

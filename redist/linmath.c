@@ -296,7 +296,7 @@ FLT quatdist(const LinmathQuat q1, const LinmathQuat q2) {
 	for (int i = 0; i < 4; i++) {
 		rtn += q1[i] * q2[i];
 	}
-	rtn = linmath_max(1., linmath_min(-1, rtn));
+	rtn = linmath_min(1., linmath_max(-1., rtn));
 	return 2 * acos(FLT_FABS(rtn));
 }
 
@@ -546,17 +546,17 @@ inline void quattomatrix33(FLT *matrix33, const LinmathQuat qin) {
 	FLT zz = 2 * q[3] * q[3];
 	FLT zw = 2 * q[3] * q[0];
 
-	// opengl major
+	// row-major (matches quattomatrix 4x4 and quatfrommatrix33)
 	matrix33[0] = 1 - yy - zz;
-	matrix33[1] = xy + zw;
-	matrix33[2] = xz - yw;
+	matrix33[1] = xy - zw;
+	matrix33[2] = xz + yw;
 
-	matrix33[3] = xy - zw;
+	matrix33[3] = xy + zw;
 	matrix33[4] = 1 - xx - zz;
-	matrix33[5] = yz + xw;
+	matrix33[5] = yz - xw;
 
-	matrix33[6] = xz + yw;
-	matrix33[7] = yz - xw;
+	matrix33[6] = xz - yw;
+	matrix33[7] = yz + xw;
 	matrix33[8] = 1 - xx - yy;
 }
 

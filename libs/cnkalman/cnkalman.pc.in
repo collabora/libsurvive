@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/include/cnkalman
+
+Name: @CMAKE_PROJECT_NAME@
+Description: A C and C++ extended kalman filter library
+Version: 0
+Libs: -L${libdir} -lcnkalman @EXTRA_LIBS@
+Cflags: -I${includedir} -I${includedir}/redist

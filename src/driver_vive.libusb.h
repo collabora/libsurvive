@@ -214,7 +214,8 @@ static void handle_transfer(struct libusb_transfer *transfer) {
 	SurviveContext *ctx = iface->ctx;
 	if (!iface->shutdown && transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
         iface->consecutive_timeouts++;
-        if(iface->consecutive_timeouts >= 3) {
+		bool is_rf_device = survive_device_is_rf(iface->usbInfo->device_info);
+        if(iface->consecutive_timeouts >= 3 || is_rf_device) {
             SV_WARN("%f %s Device turned off: %d", survive_run_time(ctx), survive_colorize_codename(iface->assoc_obj),
                     transfer->status);
             goto object_turned_off;

@@ -1,0 +1,41 @@
+# Linux
+.idea
+*.o
+*.so
+lib
+cmake-build-*
+build*
+
+# Temp files
+*~
+*/\#*\#
+\#*\#
+
+
+# Windows specific
+*.dll
+*.exe
+obj/
+bin/
+x64/
+packages
+.vs/
+Debug/
+Release/
+*.VC.db
+*.user
+*.ipch
+*.tlog
+*.d
+build
+
+.options
+.zip
+.avi
+
+*/__pycache__
+*.pyc
+
+venv
+.eggs/
+dist/

@@ -944,6 +944,9 @@ void survive_kalman_tracker_process_noise(const struct SurviveKalmanTracker_Para
 	 * positional model with a second order rotational model with tuning parameters
 	 */
 
+	/* dt is capped to prevent NaN/inf values */
+	if (t > 0.05) t = 0.05;
+
 	FLT t2 = t * t;
 	FLT t3 = t2 * t;
 	FLT t4 = t3 * t;
@@ -1485,7 +1488,7 @@ void survive_kalman_tracker_stats(SurviveKalmanTracker *tracker) {
 	SV_VERBOSE(5, "\t%-32s " Point19_format, "Mean reported variance", LINMATH_VEC19_EXPAND(var));
 	scalend(var, tracker->stats.dropped_var, 1. / tracker->stats.reported_poses, SURVIVE_MODEL_MAX_STATE_CNT);
 	SV_VERBOSE(5, "\t%-32s " Point19_format, "Mean dropped variance", LINMATH_VEC19_EXPAND(var));
-	FLT integration_variance[16];
+	FLT integration_variance[16] = {0};
 	variance_tracker_calc(&tracker->pose_variance, integration_variance);
 	SV_VERBOSE(5, "\t%-32s %e (%7u integrations, %7.3fhz) " Point7_format, "Obs error",
 			   tracker->stats.obs_total_error / (FLT)tracker->stats.obs_count, (unsigned)tracker->stats.obs_count,
