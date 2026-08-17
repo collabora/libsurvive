@@ -189,6 +189,20 @@ static inline void survive_close_usb_device(struct SurviveUSBInfo *usbInfo) {
 	}
 
 	free(usbInfo->handle);
+	usbInfo->handle = 0;
+
+	/* Unlike the libusb backend, HIDAPI has no transfer-completion callback to
+	   raise request_close; it is otherwise only set from HAPIReceiver() when
+	   hid_read() fails. Without setting it here the wait loop in
+	   survive_vive_close() never terminates, so config_save() further down in
+	   survive_close() is never reached and lighthouse calibration is lost.
+	   Freeing the handle above is safe because survive_usb_handle_close() is a
+	   no-op in this backend. */
+	for (size_t j = 0; j < usbInfo->interface_cnt; j++) {
+		usbInfo->interfaces[j].shutdown = 1;
+		usbInfo->interfaces[j].assoc_obj = 0;
+	}
+	usbInfo->request_close = true;
 #ifndef HID_NONBLOCKING
 	for (int j = 0; j < MAX_INTERFACES_PER_DEVICE; j++) {
 		OGJoinThread(sv->udev[i].interfaces->servicethread);
