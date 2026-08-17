@@ -189,6 +189,15 @@ static inline void survive_close_usb_device(struct SurviveUSBInfo *usbInfo) {
 	}
 
 	free(usbInfo->handle);
+	usbInfo->handle = 0;
+
+	// HIDAPI has no transfer-completion callback to raise request_close,
+	// this needs to be set manually to avoid hanging in survive_vive_close().
+	for (size_t j = 0; j < usbInfo->interface_cnt; j++) {
+		usbInfo->interfaces[j].shutdown = 1;
+		usbInfo->interfaces[j].assoc_obj = 0;
+	}
+	usbInfo->request_close = true;
 #ifndef HID_NONBLOCKING
 	for (int j = 0; j < MAX_INTERFACES_PER_DEVICE; j++) {
 		OGJoinThread(sv->udev[i].interfaces->servicethread);
