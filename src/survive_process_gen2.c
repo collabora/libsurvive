@@ -60,6 +60,22 @@ static void ootx_packet_clbk_d_gen2(ootx_decoder_context *ct, ootx_packet *packe
 	  SV_INFO("Got OOTX packet %d %08x", ctx->bsd[id].mode, (unsigned)v15.id);
 
 		b->BaseStationID = v15.id;
+
+	    const char *whitelist = survive_configs(ctx, "use-lighthouses", SC_GET, "");
+		SV_INFO("PRINT WHITELIST '%s' is whitelisted", whitelist);
+	    if (whitelist && whitelist[0] != 0) {
+	        char id_str[16] = {0};
+	        sprintf(id_str, "%X", b->BaseStationID);
+			SV_WARN("Checking lighthouse %s (idx %d) ", id_str, id);
+	        if (strstr(whitelist, id_str) == NULL) {
+	            SV_WARN("Lighthouse %s (idx %d) is not in the whitelist. Disabling.", id_str, id);
+	            b->disable = 1;
+	        } else {
+				SV_INFO("Lighthouse %s (idx %d) discovered and in whitelist. Enabling.", id_str, id);
+				b->disable = 0;
+			}
+	    }
+
 		for (int i = 0; i < 2; i++) {
 			b->fcal[i].phase = v15.fcal_phase[i];
 			b->fcal[i].tilt = v15.fcal_tilt[i];
@@ -195,7 +211,8 @@ SURVIVE_EXPORT void survive_default_sync_process(SurviveObject *so, survive_chan
 		SV_WARN("Invalid channel requested(%d) for %s", channel, so->codename)
 		return;
 	}
-
+	// Run OOTX FIRST. This allows a disabled LH to be identified and (if whitelisted) re-enabled
+	survive_ootx_behavior(so, bsd_idx, ctx->lh_version, ootx);
 	if (so->ctx->bsd[bsd_idx].disable)
 		return;
 

@@ -49,6 +49,7 @@ STATIC_CONFIG_ITEM(LH_0_DISABLE, "lighthouse-0-disable", 'b', "Disable lh at idx
 STATIC_CONFIG_ITEM(LH_1_DISABLE, "lighthouse-1-disable", 'b', "Disable lh at idx 1", 0)
 STATIC_CONFIG_ITEM(LH_2_DISABLE, "lighthouse-2-disable", 'b', "Disable lh at idx 2", 0)
 STATIC_CONFIG_ITEM(LH_3_DISABLE, "lighthouse-3-disable", 'b', "Disable lh at idx 3", 0)
+STATIC_CONFIG_ITEM(USE_LIGHTHOUSES, "use-lighthouses", 's', "Comma-separated list of lighthouse IDs (hex) to use for tracking.", "")
 
 STRUCT_CONFIG_SECTION(SurviveContext)
 STRUCT_CONFIG_ITEM("lighthouse-max-update", "Maximum instant move for a lighthouse", .01, t->settings.lh_max_update);
@@ -229,7 +230,6 @@ SURVIVE_EXPORT int8_t survive_get_bsd_idx(SurviveContext *ctx, survive_channel c
 
 	if (ctx->lh_version == 0) {
 		if (ctx->bsd[channel].mode == 0xFF) {
-			ctx->bsd[channel] = (BaseStationData){.tracker = ctx->bsd[channel].tracker};
 			ctx->bsd[channel].mode = channel;
 			ctx->activeLighthouses++;
 			SV_INFO("Adding lighthouse ch %d (cnt: %d)", channel, ctx->activeLighthouses);
@@ -243,7 +243,6 @@ SURVIVE_EXPORT int8_t survive_get_bsd_idx(SurviveContext *ctx, survive_channel c
 
 	for (i = 0; i < NUM_GEN2_LIGHTHOUSES; i++) {
 		if (ctx->bsd[i].mode == 0xFF) {
-			ctx->bsd[i] = (BaseStationData){.tracker = ctx->bsd[i].tracker};
 			ctx->bsd[i].mode = channel;
 			if (ctx->activeLighthouses < i + 1) {
 				ctx->activeLighthouses = i + 1;
@@ -502,8 +501,16 @@ SurviveContext *survive_init_internal(int argc, char *const *argv, void *userDat
 
 	pctx->callbackStatsTimeBetween = survive_configf(ctx, "output-callback-stats", SC_GET, 0.0);
 
+	const char *whitelist = survive_configs(ctx, "use-lighthouses", SC_GET, "");
+    bool use_whitelist = (whitelist && whitelist[0] != 0);
+    if(use_whitelist) {
+        SV_INFO("Using lighthouse whitelist: %s", whitelist);
+    }
+
 	for (int i = 0; i < NUM_GEN2_LIGHTHOUSES; i++) {
-		if (config_read_lighthouse(ctx->lh_config, &(ctx->bsd[i]), i)) {
+		// config_read_lighthouse returns true if it found a config
+        bool has_config = config_read_lighthouse(ctx->lh_config, &(ctx->bsd[i]), i);
+		if (has_config) {
 			if (ctx->bsd[i].mode >= 0 && ctx->bsd[i].mode < 16)
 				ctx->bsd_map[ctx->bsd[i].mode] = i;
 			ctx->activeLighthouses++;
@@ -514,7 +521,24 @@ SurviveContext *survive_init_internal(int argc, char *const *argv, void *userDat
 		if (ctx->bsd[i].disable = survive_configi(ctx, buffer, SC_GET, 0)) {
 			SV_WARN("Disabling LH %d", i);
 		}
-
+		if (use_whitelist && has_config && !ctx->bsd[i].disable) {
+            char id_str[16] = {0};
+            sprintf(id_str, "%X", ctx->bsd[i].BaseStationID); // Use ID from config
+            
+            // If ID is NOT in list, disable it
+            if (strstr(whitelist, id_str) == NULL) {
+                SV_WARN("Lighthouse %s (idx %d) is not in the whitelist. Disabling.", id_str, i);
+                ctx->bsd[i].disable = 1;
+            } else {
+                SV_INFO("Lighthouse %s (idx %d) is in whitelist. Enabling.", id_str, i);
+            }
+        }
+        
+        // If whitelist is active but this LH has no config, disable it until OOTX can identify it.
+        if (use_whitelist && !has_config) {
+             ctx->bsd[i].disable = 1;
+             SV_VERBOSE(50, "LH %d has no config, disabling pending OOTX identification.", i);
+        }
 		ctx->bsd[i].tracker = SV_MALLOC(sizeof(struct SurviveKalmanLighthouse));
 		survive_kalman_lighthouse_init(ctx->bsd[i].tracker, ctx, i);
 	};
