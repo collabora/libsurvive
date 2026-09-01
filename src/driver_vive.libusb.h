@@ -244,11 +244,18 @@ static void handle_transfer(struct libusb_transfer *transfer) {
 	if (!iface->shutdown && transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		SV_WARN("%f %s Device disconnect: %d", survive_run_time(ctx), survive_colorize_codename(iface->assoc_obj),
 				transfer->status);
-		iface->error_count++;
 		if (iface->error_count++ < 10) {
 			if (libusb_submit_transfer(transfer)) {
 				goto shutdown;
 			}
+
+			/* Resubmit succeeded: the transfer is IN FLIGHT again. Falling
+			   through to shutdown: would call libusb_free_transfer() on it,
+			   which destroys its mutex while libusb still holds it in the
+			   flying-transfers list. The next event-loop pass then locks a
+			   destroyed mutex and usbi_mutex_lock() asserts. Return and let
+			   the retry run its course. */
+			return;
 		}
 
 		goto disconnect;
