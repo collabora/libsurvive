@@ -204,8 +204,25 @@ cleanup_and_rtn:
 static inline void survive_close_usb_device(struct SurviveUSBInfo *usbInfo);
 
 static void survive_disconnect_device(SurviveUSBInterface *iface) {
+	struct SurviveUSBInfo *usbInfo = iface->usbInfo;
 	iface->ctx = 0;
-	survive_close_usb_device(iface->usbInfo);
+
+	/* We are inside handle_transfer(), i.e. inside libusb's
+	   transfer-completion callback: the event thread holds the current
+	   transfer's locks. survive_close_usb_device() calls
+	   libusb_cancel_transfer() on every interface -- including the one being
+	   handled -- and survive_config_cancel() reaches libusb the same way.
+	   Re-entering libusb from here makes pthread_mutex_lock() fail, and
+	   usbi_mutex_lock() (os/threads_posix.h) asserts: abort().
+
+	   Only mark here. The poll loop calls survive_close_usb_device()
+	   off-callback, where no lock is held. The transfer being handled is
+	   still cleaned up as before by the shutdown: label below. */
+	for (size_t j = 0; j < usbInfo->interface_cnt; j++) {
+		usbInfo->interfaces[j].shutdown = 1;
+		usbInfo->interfaces[j].assoc_obj = 0;
+	}
+	usbInfo->request_disconnect = true;
 }
 static void handle_transfer(struct libusb_transfer *transfer) {
 	uint64_t time = OGGetAbsoluteTimeUS();
