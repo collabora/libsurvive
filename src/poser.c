@@ -292,19 +292,17 @@ void PoserData_normalize_scene(SurviveContext *ctx, SurvivePose *lighthouse_pose
 	}
 
 	ApplyPoseToPose(object_pose, &arb2world, &object2arb);
-	int lh_idx = 0;
 	for (int lh = 0; lh < lighthouse_count; lh++) {
 		SurvivePose *lh2object = &lighthouse_pose[lh];
 		if (quatmagnitude(lh2object->Rot) != 0.0) {
 			ApplyPoseToPose(lh2object, &arb2world, lh2object);
 
 			if(R) {
-				CnMat LH_R = cnMatConstView(7, 7, R, lh_idx * 7, lh_idx * 7);
+				CnMat LH_R = cnMatConstView(7, 7, R, lh * 7, lh * 7);
 				CN_CREATE_STACK_MAT(jac, 7, 7);
 				apply_pose_to_pose_jac_rhs(&jac, &arb2world, lh2object);
 				cn_ABAt_add(&LH_R, &jac, &LH_R, 0);
 			}
-			lh_idx++;
 		}
 	}
 }
@@ -366,7 +364,7 @@ void PoserData_lighthouse_poses_func(PoserData *poser_data, SurviveObject *so, S
 			SurvivePose lh2world = lh2object;
 			CnMat LH_R;
 			if(R)
-				LH_R = cnMatConstView(7, 7, R, lh_idx * 7, lh_idx * 7);
+				LH_R = cnMatConstView(7, 7, R, lh * 7, lh * 7);
 			if (!quatiszero(object2World.Rot) && worldEstablished == false) {
 				ApplyPoseToPose(&lh2world, &object2World, &lh2object);
 			}
