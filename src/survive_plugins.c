@@ -60,9 +60,14 @@ static void list_add(list_t *list, const char *item) {
 }
 
 static bool list_find(list_t* plugin_list, const char* item) {
+	const char *item_name = strrchr(item, '/');
+	item_name = item_name ? item_name + 1 : item;
 	for (size_t i = 0; i < plugin_list->size; i++) {
-		char *plugin_path = plugin_list->data[i];
-		if (strcmp(plugin_path, item) == 0) {
+		const char *plugin_path = plugin_list->data[i];
+		const char *plugin_name = strrchr(plugin_path, '/');
+		plugin_name = plugin_name ? plugin_name + 1 : plugin_path;
+		// Build and install copies of a plugin must only be loaded once.
+		if (strcmp(plugin_name, item_name) == 0) {
 			return true;
 		}
 	}
