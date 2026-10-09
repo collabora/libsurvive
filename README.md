@@ -71,6 +71,8 @@ For visualization, you can either download a binary of [websocketd](https://gith
 
 ## Windows
 
+> ⚠️ If `make.ps1` finishes too quickly, it may not have been executed correctly due to [execution-policy settings](https://stackoverflow.com/questions/64633727/how-to-fix-running-scripts-is-disabled-on-this-system). Please try running the script in PowerShell window.
+
 If you have `cmake` installed on your path you can simply run the `make.ps1` script by right clicking it and seleting `Run with PowerShell`.
 
 A more manual approach is to open CMakeLists file in something like [CMake GUI](https://cmake.org/runningcmake/) to build
