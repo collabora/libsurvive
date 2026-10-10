@@ -281,6 +281,19 @@ object_turned_off:
 disconnect:
 	survive_disconnect_device(iface);
 shutdown:
+	if (iface->transfer == 0) {
+		/* Already cleaned up. survive_close_usb_device() (called via
+		 * survive_disconnect_device() above) cancels every interface's
+		 * in-flight transfer, including this one's own -- it doesn't skip
+		 * the interface that originated the disconnect. If libusb invokes
+		 * that cancellation's completion callback synchronously, this
+		 * function reenters itself and the cleanup below (which nulls
+		 * iface->transfer) already ran in that inner call. Without this
+		 * guard, active_transfers-- and libusb_release_interface() run
+		 * twice for one interface: active_transfers underflows instead of
+		 * reaching 0, and the interface is released twice. */
+		return;
+	}
 	SV_VERBOSE(200, "Cleaning up transfer on %d %s", iface->which_interface_am_i, survive_colorize(iface->hname));
 	iface->ctx = 0;
 
