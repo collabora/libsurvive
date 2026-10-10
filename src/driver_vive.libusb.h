@@ -220,6 +220,12 @@ static void handle_transfer(struct libusb_transfer *transfer) {
                     transfer->status);
             goto object_turned_off;
         } else {
+			/* Resubmit before returning -- otherwise this endpoint never
+			 * receives another transfer completion once it has timed out
+			 * even once, since nothing else will resubmit it. */
+			if (libusb_submit_transfer(transfer)) {
+				goto shutdown;
+			}
             return;
         }
 	}
@@ -227,6 +233,11 @@ static void handle_transfer(struct libusb_transfer *transfer) {
 	if (!iface->shutdown && transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		SV_WARN("%f %s Device disconnect: %d", survive_run_time(ctx), survive_colorize_codename(iface->assoc_obj),
 				transfer->status);
+		/* A stalled endpoint retried without clearing the halt condition
+		 * is guaranteed to stall again. */
+		if (transfer->status == LIBUSB_TRANSFER_STALL) {
+			libusb_clear_halt(iface->usbInfo->handle, transfer->endpoint);
+		}
 		iface->error_count++;
 		if (iface->error_count++ < 10) {
 			if (libusb_submit_transfer(transfer)) {
