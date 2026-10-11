@@ -17,16 +17,16 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Release]
-        os: [ubuntu-20.04, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
         include:
-        - os: ubuntu-20.04
+        - os: ubuntu-24.04
           build_type: Debug
           config_flags: "-DUSE_ASAN=ON"
-          deps: libasan6
+          deps: libasan8
         - os: windows-latest
           build_type: Debug
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -34,14 +34,15 @@ jobs:
       name: Get Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install p7zip-full build-essential zlib1g-dev libx11-dev libusb-1.0-0-dev freeglut3-dev liblapacke-dev libopenblas-dev libatlas-base-dev libpcap-dev python3 python3-pip apt-transport-https dotnet-sdk-3.1 libpcap-dev ninja-build libeigen3-dev ${{ matrix.deps }}
-    - uses: actions/setup-python@v2
+        sudo apt-get install p7zip-full build-essential zlib1g-dev libx11-dev libusb-1.0-0-dev freeglut3-dev liblapacke-dev libopenblas-dev libatlas-base-dev libpcap-dev python3 python3-pip apt-transport-https libpcap-dev ninja-build libeigen3-dev ${{ matrix.deps }}
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
     - name: Setup windows flags
       if: contains(matrix.os, 'windows') && matrix.build_type == 'Release'
       id: flags
-      run: echo "::set-output name=SETUP_PY_FLAGS::-G 'Visual Studio 16 2019'"
+      shell: bash
+      run: echo "SETUP_PY_FLAGS=-G 'Visual Studio 17 2022'" >> "$GITHUB_OUTPUT"
     - name: Get mac dependencies
       if: contains(matrix.os, 'macos')
       run: |
@@ -77,7 +78,8 @@ jobs:
 
     - name: Set bundle name
       id: bundle
-      run: echo "::set-output name=BUNDLE_FILE_NAME::libsurvive-$(git describe --tags)-${{ matrix.os }}.zip"
+      shell: bash
+      run: echo "BUNDLE_FILE_NAME=libsurvive-$(git describe --tags)-${{ matrix.os }}.zip" >> "$GITHUB_OUTPUT"
 
     - name: Bundle
       if: matrix.build_type == 'Release'
