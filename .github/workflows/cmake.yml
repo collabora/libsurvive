@@ -34,7 +34,7 @@ jobs:
       name: Get Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install p7zip-full build-essential zlib1g-dev libx11-dev libusb-1.0-0-dev freeglut3-dev liblapacke-dev libopenblas-dev libatlas-base-dev libpcap-dev python3 python3-pip apt-transport-https libpcap-dev ninja-build libeigen3-dev ${{ matrix.deps }}
+        sudo apt-get install p7zip-full build-essential zlib1g-dev libx11-dev libusb-1.0-0-dev freeglut3-dev liblapacke-dev libopenblas-dev libpcap-dev python3 python3-pip apt-transport-https libpcap-dev ninja-build libeigen3-dev ${{ matrix.deps }}
     - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
