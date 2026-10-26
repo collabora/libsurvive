@@ -21,11 +21,11 @@ jobs:
       id: bundle
       working-directory: ${{runner.workspace}}/libsurvive      
       shell: bash
-      run: echo "BUNDLE_FILE_NAME=libsurvive-$(git describe --tags)-source.zip" >> "$GITHUB_OUTPUT"
+      run: echo "BUNDLE_FILE_NAME=libsurvive-$(git describe --tags 2>/dev/null || echo 0.0.0.$(git rev-list --count HEAD))-source.zip" >> "$GITHUB_OUTPUT"
 
     - name: Generate version
       working-directory: ${{runner.workspace}}/libsurvive
-      run: git describe --dirty --tags > VERSION
+      run: git describe --dirty --tags > VERSION 2>/dev/null || echo "0.0.0.$(git rev-list --count HEAD)" > VERSION
 
     - name: Remove git directories
       working-directory: ${{runner.workspace}}/libsurvive

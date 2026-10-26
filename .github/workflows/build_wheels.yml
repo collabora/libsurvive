@@ -12,7 +12,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build and test wheel (py${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -51,13 +51,15 @@ jobs:
       - name: Build
         run: python -m build --wheel
 
-      - name: Test wheel
+      - name: Test wheel (py${{ matrix.python-version }})
         shell: bash
         working-directory: ${{ runner.temp }}
         run: |
           python -m venv test-env
           . test-env/*/activate
-          python -m pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          # --no-deps: the gooey dependency (the GUI launcher only) pulls in wxpython,
+          # which has no Linux wheels and needs GTK to compile; import needs nothing else.
+          python -m pip install --no-deps "$GITHUB_WORKSPACE"/dist/*.whl
           python -c "import pysurvive; print(pysurvive.__file__)"
 
       - uses: actions/upload-artifact@v7
