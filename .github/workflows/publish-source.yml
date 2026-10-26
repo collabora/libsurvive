@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
     - uses: actions/checkout@v7
       with:
@@ -41,8 +42,15 @@ jobs:
         path: ${{runner.workspace}}
 
     - name: Upload Release Asset
-      if: github.event_name == 'release'
+      if: github.event_name == 'release' && github.repository == 'collabora/libsurvive'
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload "${{ github.event.release.tag_name }}" "${{runner.workspace}}/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}" --clobber
+      run: |
+        # Only publish if the Build and Test workflow passed for this commit
+        conclusion=$(gh run list --repo "${{ github.repository }}" --workflow cmake.yml --commit "${{ github.sha }}" --status completed --json conclusion --jq '[.[].conclusion] | first')
+        if [ "$conclusion" != "success" ]; then
+          echo "Build and Test did not succeed for ${{ github.sha }} (conclusion: ${conclusion:-none}); not publishing"
+          exit 1
+        fi
+        gh release upload "${{ github.event.release.tag_name }}" "${{runner.workspace}}/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}" --clobber

@@ -12,8 +12,6 @@ env:
 
 jobs:
   build:
-    permissions:
-      contents: write
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -96,13 +94,6 @@ jobs:
         path: | 
           ${{runner.workspace}}/build/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}
           ${{runner.workspace}}/libsurvive/dist/*.whl
-    - name: Upload Release Asset
-      if: github.event_name == 'release'
-      shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload "${{ github.event.release.tag_name }}" "${{runner.workspace}}/build/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}" --clobber
-
     - name: Test
       if: runner.os == 'Linux'
       working-directory: ${{runner.workspace}}/build
@@ -112,3 +103,20 @@ jobs:
       run: ctest -C $BUILD_TYPE --output-on-failure --parallel
       env:
         LSAN_OPTIONS: suppressions=${{runner.workspace}}/libsurvive/useful_files/leak_suppressions.txt 
+
+  release:
+    name: Upload release assets
+    needs: build
+    if: github.event_name == 'release' && github.repository == 'collabora/libsurvive'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: libsurvive-*-Release
+        path: artifacts
+    - name: Upload Release Asset
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: find artifacts -name '*.zip' -exec gh release upload "${{ github.event.release.tag_name }}" {} --clobber --repo "${{ github.repository }}" \;
