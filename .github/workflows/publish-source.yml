@@ -8,16 +8,19 @@ on:
 
 jobs:
   gather-source:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
         submodules: recursive
     - name: Set bundle name
       id: bundle
       working-directory: ${{runner.workspace}}/libsurvive      
-      run: echo "::set-output name=BUNDLE_FILE_NAME::libsurvive-$(git describe --tags)-source.zip"
+      shell: bash
+      run: echo "BUNDLE_FILE_NAME=libsurvive-$(git describe --tags)-source.zip" >> "$GITHUB_OUTPUT"
 
     - name: Generate version
       working-directory: ${{runner.workspace}}/libsurvive
@@ -27,32 +30,19 @@ jobs:
       working-directory: ${{runner.workspace}}/libsurvive
       run: rm -rf .git
 
-    - name: Get release
-      id: get_release
-      if: github.event_name == 'release'
-      uses: bruceadams/get-release@v1.2.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Bundle
       working-directory: ${{runner.workspace}}/libsurvive
       run: 7z a ${{runner.workspace}}/${{ steps.bundle.outputs.BUNDLE_FILE_NAME }} ${{runner.workspace}}/libsurvive
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       name: Upload
       with:
         name: ${{ steps.bundle.outputs.BUNDLE_FILE_NAME }}
         path: ${{runner.workspace}}
 
     - name: Upload Release Asset
-      id: upload-release-asset
-      continue-on-error: true
       if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
+      shell: bash
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.get_release.outputs.upload_url }}
-        asset_path: ${{runner.workspace}}/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}
-        asset_name: ${{steps.bundle.outputs.BUNDLE_FILE_NAME}}
-        asset_content_type: application/zip
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release upload "${{ github.event.release.tag_name }}" "${{runner.workspace}}/${{steps.bundle.outputs.BUNDLE_FILE_NAME}}" --clobber

@@ -12,16 +12,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: recursive	  
+          submodules: recursive
 
       - name: Deploy nuget package
         working-directory: ${{ github.workspace }}
         run: .\make.ps1 --nuget
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         name: Upload
         with:
           path: ${{runner.workspace}}/libsurvive/bindings/cs/libsurvive.net/bin/Release/*.nupkg
