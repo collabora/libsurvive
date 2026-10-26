@@ -14,9 +14,6 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    env:
-      TWINE_USERNAME: __token__
-      TWINE_PASSWORD: ${{ secrets.TWINE_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -54,15 +51,41 @@ jobs:
       - name: Build
         run: python -m build --wheel
 
+      - name: Test wheel
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m venv test-env
+          . test-env/*/activate
+          python -m pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          python -c "import pysurvive; print(pysurvive.__file__)"
+
       - uses: actions/upload-artifact@v7
         name: Upload
         with:
           name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*.whl
 
+  publish:
+    name: Publish wheels to PyPI
+    needs: build_wheels
+    if: github.repository == 'collabora/libsurvive' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: wheel-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
       - name: Upload with twine
-        if: env.TWINE_PASSWORD != ''
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TWINE_TOKEN }}
         run: |
           python -m pip install twine
           python -m twine upload dist/*.whl --skip-existing
-        continue-on-error: true
