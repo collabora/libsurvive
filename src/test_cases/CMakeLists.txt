@@ -5,6 +5,18 @@ SET(SURVIVE_TESTS
 
 set(barycentric_svd_ADDITIONAL_SRCS ../barycentric_svd/barycentric_svd.c)
 
+# Regression test for two bugs in handle_transfer()'s USB transfer retry
+# logic; see the comment at the top of driver_vive_timeout_stall_test.c.
+# Compiles driver_vive.c directly (its functions under test are `static`)
+# against a fake libusb (mock_libusb.c) instead of the real one, so it
+# must NOT link driver_vive or ${LIBUSB_LIBRARY} -- survive's core target
+# doesn't pull libusb in on its own (only the driver_vive plugin does), so
+# plain `survive` is safe.
+IF(NOT WIN32 AND NOT USE_HIDAPI)
+    LIST(APPEND SURVIVE_TESTS driver_vive_timeout_stall_test)
+    set(driver_vive_timeout_stall_test_ADDITIONAL_SRCS mock_libusb.c)
+endif()
+
 IF(NOT WIN32)
     LIST(APPEND SURVIVE_TESTS watchman)
     set(watchman_ADDITIONAL_LIBS driver_vive)
@@ -14,6 +26,11 @@ foreach(test ${SURVIVE_TESTS})
     list(APPEND SURVIVE_TESTS_EXE test-${test})
     add_executable(test-${test} ${test}.c main.c ${${test}_ADDITIONAL_SRCS})
     target_link_libraries(test-${test} survive ${${test}_ADDITIONAL_LIBS})
+    if(${test} STREQUAL "driver_vive_timeout_stall_test")
+      # -g -O0: keep real stack frames for debugging failures this test
+      # finds; optimized/inlined frames obscure them.
+      target_compile_options(test-${test} PRIVATE -g -O0)
+    endif()
     add_test(NAME ${test} COMMAND test-${test})
     add_dependencies(test-${test} survive_plugins)
     set_target_properties(test-${test} PROPERTIES FOLDER "tests")
