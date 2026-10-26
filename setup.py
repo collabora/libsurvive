@@ -9,9 +9,23 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 
-version = subprocess.check_output(["git", "describe", "--tags", "--long"])
-version = version.strip().decode('utf-8').replace("-", ".")[1:]
-version = version[:version.rfind("g")-1]
+def get_version():
+    try:
+        version = subprocess.check_output(["git", "describe", "--tags", "--long"], stderr=subprocess.DEVNULL)
+        version = version.strip().decode('utf-8').replace("-", ".")[1:]
+        return version[:version.rfind("g")-1]
+    except (subprocess.CalledProcessError, OSError):
+        pass
+
+    # No tags (e.g. a fork that hasn't fetched upstream tags) or no git at all
+    try:
+        count = subprocess.check_output(["git", "rev-list", "--count", "HEAD"], stderr=subprocess.DEVNULL)
+        return "0.0.0." + count.strip().decode('utf-8')
+    except (subprocess.CalledProcessError, OSError):
+        return "0.0.0"
+
+
+version = get_version()
 
 pysurvive_path = this_directory + '/bindings/python/pysurvive/'
 cmake_args = ['-DPYTHON_GENERATED_DIR="' + pysurvive_path + '"',
