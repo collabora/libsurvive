@@ -203,6 +203,7 @@ static inline void survive_close_usb_device(struct SurviveUSBInfo *usbInfo) {
 		OGJoinThread(sv->udev[i].interfaces->servicethread);
 	}
 #endif
+	usbInfo->request_close = true;
 }
 
 void survive_usb_close(SurviveViveData *sv) {}
