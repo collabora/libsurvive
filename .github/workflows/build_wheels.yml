@@ -14,7 +14,11 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.TWINE_TOKEN }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
@@ -40,19 +44,25 @@ jobs:
         with:
           packages: build-essential cmake git libeigen3-dev liblapacke-dev libopenblas-dev libpcap-dev libusb-1.0-0-dev zlib1g-dev
 
+      - name: Install Eigen (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          vcpkg install eigen3:x64-windows
+          "CMAKE_PREFIX_PATH=$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Build
         run: python -m build --wheel
 
       - uses: actions/upload-artifact@v4
         name: Upload
         with:
-          path: ${{runner.workspace}}/dist
+          name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/*.whl
 
       - name: Upload with twine
+        if: env.TWINE_PASSWORD != ''
         run: |
           python -m pip install twine
           python -m twine upload dist/*.whl --skip-existing
         continue-on-error: true
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TWINE_TOKEN }}
