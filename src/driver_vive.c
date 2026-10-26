@@ -447,6 +447,9 @@ struct SurviveUSBInfo {
 	struct survive_config_packet *cfg_user;
 
 	bool request_close, request_reopen;
+	/* Raised from the libusb transfer-completion callback, consumed by the
+	   poll loop off-callback. See survive_disconnect_device(). */
+	bool request_disconnect;
 };
 
 struct SurviveViveData {
@@ -1030,6 +1033,13 @@ int survive_vive_usb_poll(SurviveContext *ctx, void *v) {
 		}
 
 		survive_config_poll(usbInfo);
+
+		/* Close requested from a transfer callback: do it HERE, on the poll
+		   thread, where no libusb lock is held. */
+		if (usbInfo->request_disconnect) {
+			usbInfo->request_disconnect = false;
+			survive_close_usb_device(usbInfo);
+		}
 
 		if (survive_handle_close_request_flag(usbInfo)) {
 			i--;
