@@ -11,7 +11,8 @@ set(CMAKE_CXX_STANDARD 17)
 option(USE_ASAN "Use address sanitizer" OFF)
 
 if(NOT PYTHON_EXECUTABLE)
-  find_package (Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+  # Not REQUIRED: nothing here consumes Python_*, and a Win32 target has no matching interpreter on x64 CI runners
+  find_package (Python 3.8 COMPONENTS Interpreter Development)
 endif()
 
 if(UNIX)
