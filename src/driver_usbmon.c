@@ -451,8 +451,21 @@ static int setup_usb_devices(SurviveDriverUSBMon *sp) {
 	return rtn;
 }
 
+/*
+ * libpcap >= 1.11 changed the 64-bit USB header fields (id, ts_sec) to
+ * 4-byte-aligned structs, older versions use plain (u)int64_t. Copying
+ * through memcpy works with both.
+ */
+#define SAFE_COPY(dst, src)                                                                                            \
+	{                                                                                                                  \
+		_Static_assert(sizeof(*(dst)) == sizeof(*(src)), "Size mismatch");                                             \
+		memcpy((dst), (src), sizeof(*(dst)));                                                                          \
+	}
+
 double make_time(double start, const struct _usb_header_mmapped *pMmapped) {
-	return pMmapped->ts_sec + pMmapped->ts_usec * 1.e-6 - start;
+	int64_t ts_sec;
+	SAFE_COPY(&ts_sec, &pMmapped->ts_sec);
+	return ts_sec + pMmapped->ts_usec * 1.e-6 - start;
 }
 
 const char *requestTypeToStr(uint8_t requestType) {
@@ -498,7 +511,7 @@ static double survive_usbmon_playback_run_time(const SurviveContext *ctx, void *
 const uint8_t *fill_usb_header(const void *_hdr, struct pcap_pkthdr *pkthdr, pcap_usb_header_mmapped *usbp) {
 	const USBPCAP_BUFFER_PACKET_HEADER *hdr = _hdr;
 
-	usbp->id = hdr->irpId;
+	SAFE_COPY(&usbp->id, &hdr->irpId);
 	usbp->event_type = 0; // ???
 	usbp->transfer_type = hdr->transfer;
 	usbp->endpoint_number = hdr->endpoint;
@@ -509,7 +522,8 @@ const uint8_t *fill_usb_header(const void *_hdr, struct pcap_pkthdr *pkthdr, pca
 	usbp->urb_len = 0; // ???
 	usbp->data_len = hdr->dataLength;
 	usbp->data_flag = hdr->dataLength == 0;
-	usbp->ts_sec = pkthdr->ts.tv_sec;
+	int64_t ts_sec = pkthdr->ts.tv_sec;
+	SAFE_COPY(&usbp->ts_sec, &ts_sec);
 	usbp->ts_usec = pkthdr->ts.tv_usec;
 
 	usbp->setup_flag = 1;
@@ -603,7 +617,9 @@ void *pcap_thread_fn(void *_driver) {
 #define COLORIZED_ID SURVIVE_COLORIZED_DATA(usbp->id)
 				char color_set[16] = "";
 
-				unsigned hash = ((usbp->id + (usbp->id >> 8) + (usbp->id >> 16) + (usbp->id >> 24)) & 0xFF) % 8;
+				uint64_t usbp_id;
+				SAFE_COPY(&usbp_id, &usbp->id);
+				unsigned hash = ((usbp_id + (usbp_id >> 8) + (usbp_id >> 16) + (usbp_id >> 24)) & 0xFF) % 8;
 				sprintf(color_set, "\033[0;%dm", (int)(hash + 30));
 				const char *color_reset = "\033[0m";
 				driver->time_now = this_time;
@@ -618,7 +634,7 @@ void *pcap_thread_fn(void *_driver) {
 						dev->compressed_data_idx = 0;
 						SV_VERBOSE(200, "%s start of config", color_dev_name);
 					} else if (is_config_request(usbp)) {
-						dev->last_config_id = usbp->id;
+						SAFE_COPY(&dev->last_config_id, &usbp->id);
 					} else if (is_command_setup(usbp)) {
 						SV_INFO("%s sent command 0x%02x with %u bytes:", color_dev_name, pktData[1], pktData[2]);
 						survive_dump_buffer(ctx, pktData + 3, pktData[2]);
@@ -684,7 +700,8 @@ void *pcap_thread_fn(void *_driver) {
 												usbp->event_type, usbp->transfer_type, usbp->status,
 												usbp->endpoint_number, survive_usb_interface_str(interface));
 					}
-					if (usbp->id == dev->last_config_id) {
+					SAFE_COPY(&usbp_id, &usbp->id);
+					if (usbp_id == dev->last_config_id) {
 						dev->last_config_id = 0;
 					}
 					survive_release_ctx_lock(ctx);
@@ -710,7 +727,8 @@ void *pcap_thread_fn(void *_driver) {
 					survive_usb_feature_read(dev->so, pktData, usbp->data_len);
 				}
 
-				if (usbp->id == dev->last_config_id && usbp->event_type == 'C' && dev->hasConfiged == false) {
+				SAFE_COPY(&usbp_id, &usbp->id);
+				if (usbp_id == dev->last_config_id && usbp->event_type == 'C' && dev->hasConfiged == false) {
 					ingest_config_request(dev, usbp, pktData);
 					dev->last_config_id = 0;
 					dev->packets_without_config = 0;
@@ -738,7 +756,9 @@ void *pcap_thread_fn(void *_driver) {
 					si.actual_len = usbp->data_len;
 					memset(si.buffer, 0xCA, sizeof(si.swap_buffer));
 					memcpy(si.buffer, pktData, usbp->data_len);
-					uint64_t time = usbp->ts_sec * 1000000 + usbp->ts_usec;
+					int64_t ts_sec;
+					SAFE_COPY(&ts_sec, &usbp->ts_sec);
+					uint64_t time = ts_sec * 1000000 + usbp->ts_usec;
 					survive_data_cb(time, &si);
 				} else if (!dev->hasConfiged) {
 					if (driver->allow_fs_read && dev->packets_without_config++ > 1000 &&
