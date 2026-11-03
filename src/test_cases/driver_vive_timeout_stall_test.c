@@ -1,0 +1,102 @@
+/* Regression test for two bugs in handle_transfer()'s USB transfer
+ * retry logic (driver_vive.libusb.h):
+ *
+ * 1. On LIBUSB_TRANSFER_TIMED_OUT, below the consecutive-timeout/RF-device
+ *    disconnect threshold, the function returned without resubmitting the
+ *    transfer -- the endpoint then never receives another completion,
+ *    since nothing else resubmits it.
+ * 2. The error path never called libusb_clear_halt() before retrying a
+ *    LIBUSB_TRANSFER_STALL, so the retry was guaranteed to stall again.
+ *
+ * This test drives the real, unmodified handle_transfer/AttachInterface
+ * code (via #include of driver_vive.c, since both are `static`) against a
+ * fake libusb (mock_libusb.c) that records submit/clear_halt calls, to
+ * check the retry behavior directly rather than inferring it from side
+ * effects.
+ */
+#include "../driver_vive.c"
+#include "test_case.h"
+
+extern int mock_libusb_submit_transfer_calls;
+extern int mock_libusb_clear_halt_calls;
+extern unsigned char mock_libusb_clear_halt_last_endpoint;
+
+static SurviveUSBInterface *setup_one_interface(SurviveContext *ctx, SurviveViveData *sv, struct SurviveUSBInfo *usbInfo,
+												 struct DeviceInfo *fake_device) {
+	usbInfo->handle = (USBHANDLE)0x1234; /* opaque to our mock; never dereferenced */
+	usbInfo->viveData = sv;
+	usbInfo->device_info = fake_device;
+	usbInfo->nextCfgSubmitTime = -1; /* pretend config negotiation already finished */
+
+	SurviveObject *so = survive_create_device(ctx, "TST", usbInfo, "TS0", 0);
+	usbInfo->so = so;
+
+	AttachInterface(sv, usbInfo, &fake_device->endpoints[0], usbInfo->handle, survive_data_cb);
+	return &usbInfo->interfaces[0];
+}
+
+TEST(ViveDriver, TimeoutBelowThresholdResubmits) {
+	SurviveContext *ctx = survive_init(0, 0);
+	ASSERT_EQ(ctx != 0, 1);
+
+	SurviveViveData sv = {0};
+	sv.ctx = ctx;
+	struct DeviceInfo fake_device = {
+		.name = "Test Tracker",
+		.codename = "TS0",
+		.vid = 0x28de,
+		.pid = 0x2300,
+		.type = USB_DEV_TRACKER1,
+		.endpoints = {{.num = 0x81, .name = "IMU", .type = USB_IF_TRACKER1_IMU}},
+	};
+	struct SurviveUSBInfo usbInfo = {0};
+	SurviveUSBInterface *iface = setup_one_interface(ctx, &sv, &usbInfo, &fake_device);
+
+	mock_libusb_submit_transfer_calls = 0;
+	iface->transfer->status = LIBUSB_TRANSFER_TIMED_OUT;
+	handle_transfer(iface->transfer);
+
+	TEST_PRINTF("consecutive_timeouts: %u, submit calls: %d, shutdown: %d\n", iface->consecutive_timeouts,
+				mock_libusb_submit_transfer_calls, (int)iface->shutdown);
+
+	/* Below the disconnect threshold (consecutive_timeouts < 3, not an RF
+	 * device): the transfer must be resubmitted, and the interface must
+	 * not have been torn down. */
+	ASSERT_EQ((int)iface->consecutive_timeouts, 1);
+	ASSERT_EQ(mock_libusb_submit_transfer_calls, 1);
+	ASSERT_EQ((int)iface->shutdown, 0);
+
+	return 0;
+}
+
+TEST(ViveDriver, StallClearsHaltBeforeRetry) {
+	SurviveContext *ctx = survive_init(0, 0);
+	ASSERT_EQ(ctx != 0, 1);
+
+	SurviveViveData sv = {0};
+	sv.ctx = ctx;
+	struct DeviceInfo fake_device = {
+		.name = "Test Tracker",
+		.codename = "TS0",
+		.vid = 0x28de,
+		.pid = 0x2300,
+		.type = USB_DEV_TRACKER1,
+		.endpoints = {{.num = 0x81, .name = "IMU", .type = USB_IF_TRACKER1_IMU}},
+	};
+	struct SurviveUSBInfo usbInfo = {0};
+	SurviveUSBInterface *iface = setup_one_interface(ctx, &sv, &usbInfo, &fake_device);
+
+	mock_libusb_clear_halt_calls = 0; /* AttachInterface() above also calls clear_halt once, at setup */
+	iface->transfer->status = LIBUSB_TRANSFER_STALL;
+	handle_transfer(iface->transfer);
+
+	TEST_PRINTF("clear_halt calls: %d (expected 1), clear_halt endpoint: 0x%02x (expected 0x81)\n",
+				mock_libusb_clear_halt_calls, mock_libusb_clear_halt_last_endpoint);
+
+	/* A STALL must clear the halt condition before the retry gets
+	 * (re)submitted, or the retry is guaranteed to stall again. */
+	ASSERT_EQ(mock_libusb_clear_halt_calls, 1);
+	ASSERT_EQ((int)mock_libusb_clear_halt_last_endpoint, 0x81);
+
+	return 0;
+}
