@@ -204,8 +204,14 @@ cleanup_and_rtn:
 static inline void survive_close_usb_device(struct SurviveUSBInfo *usbInfo);
 
 static void survive_disconnect_device(SurviveUSBInterface *iface) {
+	struct SurviveUSBInfo *usbInfo = iface->usbInfo;
 	iface->ctx = 0;
-	survive_close_usb_device(iface->usbInfo);
+
+	for (size_t j = 0; j < usbInfo->interface_cnt; j++) {
+		usbInfo->interfaces[j].shutdown = 1;
+		usbInfo->interfaces[j].assoc_obj = 0;
+	}
+	usbInfo->request_disconnect = true;
 }
 static void handle_transfer(struct libusb_transfer *transfer) {
 	uint64_t time = OGGetAbsoluteTimeUS();
@@ -227,11 +233,13 @@ static void handle_transfer(struct libusb_transfer *transfer) {
 	if (!iface->shutdown && transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		SV_WARN("%f %s Device disconnect: %d", survive_run_time(ctx), survive_colorize_codename(iface->assoc_obj),
 				transfer->status);
-		iface->error_count++;
 		if (iface->error_count++ < 10) {
 			if (libusb_submit_transfer(transfer)) {
 				goto shutdown;
 			}
+
+			// Resubmit succeeded, the transfer is in progress again.
+			return;
 		}
 
 		goto disconnect;
